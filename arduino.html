@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arduino Conexion</title>
+  </head>
+  <body>
+    <script src="https://app.protobject.com/framework/p.js"></script>
+    <script src="config.js"></script>
+    
+    <h1 style="font-family:sans-serif; text-align:center;">
+      Conectando al Juguete...
+    </h1>
+    
+    <script>
+      // ==========================================
+      // BUFFER PARA ARREGLAR MENSAJES PEGADOS
+      // ==========================================
+      let buffer = "";
+
+      function procesarDatosCrudos(texto) {
+        buffer += texto;
+
+        // Separar posibles JSONs pegados
+        let partes = buffer.split("}");
+        buffer = partes.pop(); // guarda lo incompleto
+
+        let mensajes = [];
+
+        for (let parte of partes) {
+          let posibleJSON = parte + "}";
+
+          try {
+            let obj = JSON.parse(posibleJSON);
+            mensajes.push(obj);
+          } catch (e) {
+            console.warn("JSON inválido descartado:", posibleJSON);
+          }
+        }
+
+        return mensajes;
+      }
+      // ==========================================
+
+      // 1. Iniciar conexión
+      Protobject.Arduino.start();
+
+      let estadoAnterior = { d7: 1, d8: 1 };
+
+      function identificarObjeto(valorAnalogico) {
+        if (valorAnalogico < 50) return 0; 
+        if (valorAnalogico > 400 && valorAnalogico < 600) return 1;
+        if (valorAnalogico > 700 && valorAnalogico < 900) return 2;
+        return 99; 
+      }
+
+      // 2. Escuchar datos
+      Protobject.Arduino.onData((rawData) => {
+        
+        // Aseguramos que sea string
+        let texto = typeof rawData === "string" 
+          ? rawData 
+          : JSON.stringify(rawData);
+
+        let mensajes = procesarDatosCrudos(texto);
+
+        for (let data of mensajes) {
+
+          if (data.d7 === 0 && estadoAnterior.d7 === 1) {
+            let id = identificarObjeto(data.a0);
+            Protobject.Core.send({ 
+              evento: "tarjeta", 
+              id_tarjeta: id 
+            }).to("index.html");
+          }
+
+          if (data.d8 === 0 && estadoAnterior.d8 === 1) {
+            let idB1 = identificarObjeto(data.a1);
+            let idB2 = identificarObjeto(data.a2);
+
+            Protobject.Core.send({ 
+              evento: "silabas", 
+              b1: idB1, 
+              b2: idB2 
+            }).to("index.html");
+          }
+
+          estadoAnterior.d7 = data.d7;
+          estadoAnterior.d8 = data.d8;
+        }
+      });
+    </script>
+  </body>
+</html>

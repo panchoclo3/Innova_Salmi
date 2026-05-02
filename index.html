@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Juguete Educativo</title>
+    
+    <script src="https://unpkg.com/tone"></script>
+
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        background-color: #f0f8ff;
+        padding-top: 100px;
+      }
+
+      .status-box {
+        background: white;
+        padding: 40px;
+        border-radius: 15px;
+        width: 50%;
+        margin: auto;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
+
+      #mensaje {
+        font-size: 2em;
+        color: #333;
+        font-weight: bold;
+        margin-top: 20px;
+      }
+
+      .hint {
+        margin-top: 20px;
+        color: #666;
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    
+    <div class="status-box">
+      <h1>Estado del Juguete</h1>
+      <div id="mensaje">Esperando tarjeta...</div>
+      <div class="hint">Presiona "a" o "s" en tu teclado</div>
+    </div>
+
+    <script>
+      const cajaMensaje = document.getElementById('mensaje');
+
+      // IMPORTANTE: asegurar que la página tenga foco para que el teclado funcione
+      window.focus();
+
+      // ==========================================
+      // CONFIGURACIÓN DE AUDIO (Tone.js)
+      // ==========================================
+      // Creamos el reproductor (Player), cargamos el mp3 y lo conectamos a los parlantes (toDestination)
+      const reproductorCa = new Tone.Player("ca.mp3").toDestination();
+      
+      // Variable para saber si ya despertamos el contexto de audio
+      let audioIniciado = false;
+
+      // ==========================================
+      // MANEJO DE TECLADO
+      // ==========================================
+      document.addEventListener('keydown', async (evento) => {
+        
+        // Evitamos que deje la tecla pegada y sature el audio
+        if (evento.repeat) return; 
+
+        // 1. REGLA DE ORO DE TONE.JS: Iniciar el contexto de audio con la primera interacción
+        if (!audioIniciado) {
+          await Tone.start();
+          console.log("Motor de audio Tone.js listo");
+          audioIniciado = true;
+        }
+
+        console.log("Tecla presionada:", evento.key);
+
+        if (evento.key === "A") {
+          cajaMensaje.innerText = "¡Sílaba CA!";
+          cajaMensaje.style.color = "#4CAF50";
+
+          // Reproduce el sonido solo si el archivo ya terminó de cargar
+          Tone.loaded().then(() => {
+            // Es importante detenerlo primero por si presionas "a" muy rápido dos veces
+            reproductorCa.stop(); 
+            reproductorCa.start();
+          });
+        } 
+        
+        else if (evento.key === "Z") {
+          cajaMensaje.innerText = "Esperando tarjeta...";
+          cajaMensaje.style.color = "#333";
+          
+          // Detiene la reproducción inmediatamente
+          reproductorCa.stop(); 
+        }
+      });
+    </script>
+  </body>
+</html>
